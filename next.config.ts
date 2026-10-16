@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@daytonaio/sdk"],
+  serverExternalPackages: ["@daytonaio/sdk", "@aws-sdk/client-s3"],
   agentRules: false,
   async headers() {
     return [

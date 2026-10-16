@@ -1,6 +1,7 @@
 import "server-only";
 import { mkdir, readFile, rename, stat, writeFile } from "fs/promises";
 import path from "path";
+import { openStore, REMOTE, type ObjectStore } from "./object-store";
 import type { Environment, Match, StepRecord } from "./types";
 
 export type DB = {
@@ -10,12 +11,6 @@ export type DB = {
 };
 
 const FILE = path.join(process.cwd(), ".data", "store.json");
-const SERVERLESS = !!(
-  process.env.NETLIFY ||
-  process.env.VERCEL ||
-  process.env.AWS_LAMBDA_FUNCTION_NAME ||
-  process.env.LAMBDA_TASK_ROOT
-);
 
 /** Nothing ships with the page. Every game here was written by somebody. */
 function empty(): DB {
@@ -49,33 +44,8 @@ const MATCH = "match/";
 const STEPS = "steps/";
 const LEGACY = "db.json";
 
-type BlobStore = {
-  get: (key: string, options?: { type: "text" }) => Promise<string | null>;
-  setJSON: (key: string, value: unknown) => Promise<unknown>;
-  delete: (key: string) => Promise<void>;
-  list: (options: { prefix: string }) => Promise<{ blobs: { key: string }[] }>;
-};
-type MakeStore = (opts: { name: string; consistency: string }) => unknown;
-let makeStore: MakeStore | null = null;
-
-/**
- * Build the client fresh every time.
- *
- * The host hands each invocation its own short-lived credentials, and a client
- * keeps whichever ones it was built with. Holding one across invocations means
- * holding a token past its expiry, and after that every read fails with
- * "Token expired" — the games are all still there, the page just cannot see
- * them. Building a client reads the current credentials and makes no network
- * call, so there is nothing to save by keeping it.
- */
-async function blobs(): Promise<BlobStore | null> {
-  if (!SERVERLESS) return null;
-  try {
-    makeStore ??= (await import("@netlify/blobs")).getStore as MakeStore;
-    return makeStore({ name: "arena", consistency: "strong" }) as BlobStore;
-  } catch {
-    return null;
-  }
+async function blobs(): Promise<ObjectStore | null> {
+  return openStore("arena");
 }
 
 const UNREACHABLE = "the store is unreachable, so nothing was saved";
@@ -246,7 +216,7 @@ function editFile<T>(fn: (db: DB) => T): Promise<T> {
 // ── What the rest of the app uses ────────────────────────────────────────────
 
 export async function listEnvironments(): Promise<Environment[]> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     const rows = await listCached<Environment>(ENV);
     for (const row of rows) row.kind = "authored";
     return [...rows].sort(newestFirst);
@@ -256,7 +226,7 @@ export async function listEnvironments(): Promise<Environment[]> {
 }
 
 export async function getEnvironment(id: string): Promise<Environment | null> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     // Throws rather than answering "no such game" when the store is quiet.
     // Telling somebody their game does not exist is the one wrong answer here.
@@ -269,7 +239,7 @@ export async function getEnvironment(id: string): Promise<Environment | null> {
 }
 
 export async function putEnvironment(env: Environment): Promise<Environment> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     await writeKey(ENV + env.id, env);
     forget(ENV);
@@ -282,7 +252,7 @@ export async function putEnvironment(env: Environment): Promise<Environment> {
 }
 
 export async function getMatch(id: string): Promise<Match | null> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     return readKey<Match>(MATCH + id);
   }
@@ -291,7 +261,7 @@ export async function getMatch(id: string): Promise<Match | null> {
 }
 
 export async function putMatch(match: Match): Promise<Match> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     await writeKey(MATCH + match.id, match);
     forget(MATCH);
@@ -304,7 +274,7 @@ export async function putMatch(match: Match): Promise<Match> {
 }
 
 export async function listMatches(environmentId?: string): Promise<Match[]> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     const rows = await listCached<Match>(MATCH);
     return rows
       .filter((m) => !environmentId || m.environment_id === environmentId)
@@ -317,7 +287,7 @@ export async function listMatches(environmentId?: string): Promise<Match[]> {
 }
 
 export async function listSteps(matchId: string): Promise<StepRecord[]> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     return (await readKey<StepRecord[]>(STEPS + matchId)) ?? [];
   }
@@ -339,7 +309,7 @@ async function appendToTape(matchId: string, step: StepRecord): Promise<StepReco
 }
 
 export async function appendStep(step: StepRecord): Promise<StepRecord> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     return appendToTape(step.match_id, step);
   }
@@ -355,7 +325,7 @@ export async function replaceMatchAndStep(
   match: Match,
   step: StepRecord,
 ): Promise<{ match: Match; step: StepRecord }> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     await migrate();
     // The tape first: a move that is recorded but not yet reflected in the
     // match reads as a slow save, where the reverse reads as a lost move.

@@ -1,6 +1,7 @@
 import "server-only";
 import { mkdir, readFile, rename, writeFile } from "fs/promises";
 import path from "path";
+import { openStore, REMOTE, type ObjectStore } from "./object-store";
 
 /**
  * A flight recorder for sessions nobody is watching.
@@ -21,39 +22,21 @@ export type TraceEntry = {
 
 const KEEP = 500;
 const FILE = path.join(process.cwd(), ".data", "trace.json");
-const SERVERLESS = !!(
-  process.env.NETLIFY ||
-  process.env.VERCEL ||
-  process.env.AWS_LAMBDA_FUNCTION_NAME ||
-  process.env.LAMBDA_TASK_ROOT
-);
 const BLOB_KEY = "trace.json";
 
 let mem: TraceEntry[] = [];
 let chain: Promise<void> = Promise.resolve();
 
-type BlobStore = {
-  get: (key: string) => Promise<string | null>;
-  setJSON: (key: string, value: unknown) => Promise<unknown>;
-};
-type MakeStore = (opts: { name: string; consistency: string }) => unknown;
-let makeStore: MakeStore | null = null;
-
-/** Built fresh each time, for the same reason as the store: tokens expire. */
-async function blobs(): Promise<BlobStore | null> {
-  if (!SERVERLESS) return null;
-  try {
-    makeStore ??= (await import("@netlify/blobs")).getStore as MakeStore;
-    // Its own store. The recorder rewrites its whole log on every entry, and it
-    // must never be the reason a game fails to save.
-    return makeStore({ name: "arena-trace", consistency: "strong" }) as BlobStore;
-  } catch {
-    return null;
-  }
+/**
+ * Its own store. The recorder rewrites its whole log on every entry, and it
+ * must never be the reason a game fails to save.
+ */
+async function blobs(): Promise<ObjectStore | null> {
+  return openStore("arena-trace");
 }
 
 async function read(): Promise<TraceEntry[]> {
-  if (SERVERLESS) {
+  if (REMOTE) {
     const store = await blobs();
     if (store) {
       try {
@@ -74,7 +57,7 @@ async function read(): Promise<TraceEntry[]> {
 
 async function write(rows: TraceEntry[]) {
   mem = rows;
-  if (SERVERLESS) {
+  if (REMOTE) {
     const store = await blobs();
     if (store) await store.setJSON(BLOB_KEY, rows).catch(() => undefined);
     return;

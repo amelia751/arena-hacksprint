@@ -178,6 +178,7 @@ src/
     ├── validate.ts           V0–V8 and the playout sweep
     ├── match-service.ts      one step(), one revision, one tape
     ├── store.ts              one key per game, match and tape
+    ├── object-store.ts       the Amazon S3 bucket those keys live in
     └── guide.ts              what an author is told, and nothing beyond it
 scripts/                      smoke checks, run with npm run check:*
 ```
@@ -197,9 +198,16 @@ secure contexts, so use `http://localhost` rather than a file or a raw IP.
 
 ## Deploy
 
-`netlify.toml` builds the app with the Next.js runtime plugin. Set `DAYTONA_API_KEY` (and
-`DAYTONA_API_URL` / `DAYTONA_TARGET` if you use them) in the site's environment; nothing else needs
-a secret.
+`netlify.toml` builds the app with the Next.js runtime plugin. Set these in the site's environment:
+
+- `DAYTONA_API_KEY` (and `DAYTONA_API_URL` / `DAYTONA_TARGET` if you use them)
+- `ARENA_S3_BUCKET`, `ARENA_S3_REGION`, `ARENA_S3_ACCESS_KEY_ID`, `ARENA_S3_SECRET_ACCESS_KEY` for
+  the bucket games, matches and tapes are kept in, one object per key under `arena/`. The key
+  needs `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on the objects and `s3:ListBucket` on
+  the bucket, nothing more.
+
+Locally everything is kept in `.data/store.json`. `ARENA_STORE=s3` uses the bucket instead; set
+`ARENA_S3_PREFIX` as well so local runs stay clear of the live games.
 
 ## License
 

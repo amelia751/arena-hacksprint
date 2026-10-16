@@ -217,10 +217,10 @@ export function DiagramFigure() {
             <div className="dg-store">
               <header>
                 <Icon glyph="store" tone="#0f7a74" />
-                <Brand src="/diagram/netlify.svg" label="Netlify Blobs" />
+                <Brand src="/diagram/s3.svg" label="Amazon S3" />
               </header>
               <p>
-                store <code>arena</code> — <code>env/</code> · <code>match/</code> · <code>steps/</code>, a key each
+                bucket <code>arena/</code> — <code>env/</code> · <code>match/</code> · <code>steps/</code>, a key each
               </p>
             </div>
           </div>
