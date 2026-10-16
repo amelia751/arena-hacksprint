@@ -154,12 +154,8 @@ export function DiagramFigure() {
                   <Icon glyph="engine" tone="#c9a227" />
                   <p className="kicker">Sandbox</p>
                 </header>
-                <Brand src="/diagram/daytona.svg" label="Daytona" note="network blocked" />
-                <p>
-                  pure · injected <code>rng(n)</code>
-                  <br />
-                  no Date + no Math.random + no I/O
-                </p>
+                <Brand src="/diagram/daytona.svg" label="Daytona" note="isolated sandbox" />
+                <p>runs every game&apos;s code, no network access</p>
               </div>
               <div className="dg-sub-box">
                 <header>
