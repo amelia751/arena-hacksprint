@@ -560,6 +560,14 @@ async function post<T>(
   }
 }
 
+const SIGNATURES: Record<keyof EnvCode, string> = {
+  init: "init(seed)",
+  legal_actions: "legal_actions(state, player)",
+  observe: "observe(state, player)",
+  step: "step(state, action)",
+  render: "render(observation)",
+};
+
 export async function makeRealm(code: EnvCode): Promise<Realm> {
   const parts: [keyof EnvCode, string][] = [
     ["init", code.init],
@@ -571,6 +579,14 @@ export async function makeRealm(code: EnvCode): Promise<Realm> {
   for (const [name, src] of parts) {
     if (!src || !src.trim()) {
       throw new SandboxError(`${name} is empty — send the function source`, name);
+    }
+    const declared = new RegExp(`\\bfunction\\s+${name}\\s*\\(|\\b(?:var|let|const)\\s+${name}\\s*=`);
+    if (!declared.test(src)) {
+      throw new SandboxError(
+        `${name} does not declare ${name}. Send the whole declaration, not just its body: ` +
+          `function ${SIGNATURES[name]} { ... }`,
+        name,
+      );
     }
   }
   const sources: [string, string][] = [["prelude", PRELUDE], ...parts, ["driver", DRIVER]];
