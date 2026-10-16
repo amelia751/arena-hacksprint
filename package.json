@@ -1,0 +1,44 @@
+{
+  "name": "arena",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "check:view": "node scripts/smoke-view.mjs",
+    "check:play": "node scripts/smoke-play.mjs",
+    "check:sandbox": "node scripts/smoke-sandbox.mjs",
+    "check:refresh": "node scripts/smoke-refresh.mjs",
+    "check:wait": "node scripts/smoke-wait.mjs",
+    "check:tools": "node scripts/smoke-tools.mjs",
+    "check:answers": "node scripts/smoke-answers.mjs",
+    "check:webmcp": "node scripts/probe-webmcp.mjs",
+    "check:store": "node --import ./scripts/register-loader.mjs scripts/smoke-store.mjs",
+    "check:create": "node scripts/smoke-create.mjs",
+    "diagram": "node scripts/diagram-png.mjs",
+    "check:runtime": "node --env-file=.env.local scripts/smoke-runtime.mjs"
+  },
+  "dependencies": {
+    "@daytonaio/sdk": "^0.224.1",
+    "@netlify/blobs": "^11.0.2",
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^5.15.13",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "playwright": "^1.62.1",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "webmcp-types": "^0.1.5"
+  }
+}
